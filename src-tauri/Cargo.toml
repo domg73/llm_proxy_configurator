@@ -1,0 +1,28 @@
+[package]
+name = "llm_proxy_configurator"
+version = "1.0.0"
+description = "llm_proxy configurator — GUI editor for llm_proxy.toml / llm_proxy_bridge.toml"
+edition = "2021"
+license = "MIT"
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rfd = { version = "0.15", default-features = false, features = ["xdg-portal"] }
+
+[lib]
+name = "llm_proxy_configurator_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[features]
+# by default Tauri runs in a webview that supports a custom protocol.
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

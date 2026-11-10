@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>llm_proxy configurator</title>
+<link rel="stylesheet" href="style.css?v=32">
+<script>
+/* theme: system (follows the OS's prefers-color-scheme) / dark / light —
+   per-browser choice persisted in localStorage; ?theme= overrides for testing */
+(function () {
+  var root = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem("llm_proxy_theme"); } catch (e) {}
+  var q = new URLSearchParams(location.search).get("theme");
+  var choice = (q === "system" || q === "dark" || q === "light") ? q
+    : (saved === "system" || saved === "dark" || saved === "light") ? saved
+    : "system";
+  var mq = matchMedia("(prefers-color-scheme: light)");
+  var sel = null;
+  function apply() {
+    root.dataset.theme = choice === "system" ? (mq.matches ? "light" : "dark") : choice;
+    if (sel) sel.value = choice;
+  }
+  apply();
+  if (mq.addEventListener) mq.addEventListener("change", apply);
+  document.addEventListener("DOMContentLoaded", function () {
+    sel = document.getElementById("theme-select");
+    if (!sel) return;
+    sel.value = choice;
+    sel.addEventListener("change", function () {
+      choice = sel.value;
+      try { localStorage.setItem("llm_proxy_theme", choice); } catch (e) {}
+      apply();
+    });
+    apply(); /* DOM ready — sync the dropdown */
+  });
+})();
+</script>
+</head>
+<body>
+
+<header>
+  <div class="actions">
+    <button id="btn-load" title="Load an existing llm_proxy.toml">📂 Load</button>
+    <button id="btn-save" title="Save the configuration (Ctrl+S — overwrites the loaded file · Ctrl+Shift+S = Save As)">💾 Save</button>
+    <div class="mode-row">
+      <button id="mode-local" class="mode-tab active" title="Local llm_proxy with one or more backend profiles">Local</button>
+      <button id="mode-bridge" class="mode-tab" title="Bridge: no local backend — relays every request to a remote llm_proxy and mirrors its stats on the local dashboard">Bridge</button>
+    </div>
+  </div>
+  <div class="theme-switch">
+    <span class="theme-label" title="color theme">◐ theme</span>
+    <select id="theme-select" title="color theme">
+      <option value="system">system</option>
+      <option value="dark">dark</option>
+      <option value="light">light</option>
+    </select>
+  </div>
+  <input type="file" id="load-file" hidden accept=".toml">
+</header>
+
+<main>
+  <!-- ============ EDITOR ============ -->
+  <section class="editor">
+
+    <div id="panel-local">
+
+    <div class="card">
+      <h2>General settings</h2>
+      <label class="wide">Bind <span class="hint">(expose on the LAN; when disabled the app uses the 127.0.0.1 default and the line is commented out)</span>
+        <div class="row">
+          <input type="checkbox" id="f-bind-on" class="tgl" title="Checked = bind line active in the TOML; unchecked = line commented out (#)">
+          <input id="f-bind" type="text" spellcheck="false" placeholder="0.0.0.0">
+        </div>
+      </label>
+      <label class="wide">Token <span class="hint">(when enabled and empty = 256-bit secret auto-generated on first start; unchecked = line commented out)</span>
+        <div class="row">
+          <input type="checkbox" id="f-token-on" class="tgl" title="Checked = token line active in the TOML; unchecked = line commented out (#)">
+          <input id="f-token" type="text" spellcheck="false" placeholder="&#8220;&#8221; = generate on first start">
+          <button id="btn-token" class="ghost" title="Generate a random 256-bit secret (64 hex)">🎲 Generate</button>
+          <button id="btn-token-clear" class="ghost" title="Clear">✕</button>
+        </div>
+      </label>
+      <div class="grid3">
+        <label>Active profile
+          <select id="f-active"></select>
+        </label>
+        <label>Proxy port <span class="hint">(OpenAI /v1)</span>
+          <input id="f-port" type="number" min="1" max="65535">
+        </label>
+        <label>Stats port <span class="hint">(dashboard)</span>
+          <input id="f-stats" type="number" min="1" max="65535">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs-row">
+        <h2>Profiles</h2>
+        <div class="tabs" id="tabs"></div>
+        <div class="tab-actions">
+          <button id="btn-add" title="Add a new profile">＋ New</button>
+          <button id="btn-dup" title="Duplicate the current profile">⧉ Duplicate</button>
+          <button id="btn-del" class="danger" title="Delete the current profile">🗑 Delete</button>
+        </div>
+      </div>
+      <div id="profile-body"></div>
+    </div>
+
+    </div><!-- /panel-local -->
+
+    <div id="panel-bridge" style="display:none">
+      <div class="card">
+        <h2>Bridge settings</h2>
+        <label class="wide">Remote <span class="hint">(host:port of the remote llm_proxy — its [proxy] port, not its backend)</span>
+          <input id="b-remote" type="text" spellcheck="false" placeholder="192.168.1.50:9931">
+        </label>
+        <label class="wide">Remote token <span class="hint">(the remote's token, sent on every forwarded request; empty = line omitted)</span>
+          <input id="b-token" type="text" spellcheck="false" placeholder="the remote's token">
+        </label>
+        <div class="grid2">
+          <label>Local proxy port <span class="hint">(OpenAI /v1 — clients point here)</span>
+            <input id="b-port" type="number" min="1" max="65535">
+          </label>
+          <label>Local stats port <span class="hint">(dashboard mirror)</span>
+            <input id="b-stats" type="number" min="1" max="65535">
+          </label>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============ PREVIEW ============ -->
+  <section class="preview-col">
+    <div class="card preview-card">
+      <div class="preview-head">
+      <h2>Live preview — <code>llm_proxy.toml</code></h2>
+        <span id="preview-ts" class="ts" title="Last preview update"></span>
+        <span id="legend" class="legend" title="Highlighted section = profile in editing (selected tab). The active profile (default at startup) is chosen from the dropdown">▮ = in editing</span>
+        <button id="btn-copy" title="Copy the TOML to the clipboard">⧉ Copy</button>
+      </div>
+      <div id="warnings" class="warnings" hidden></div>
+      <pre id="preview" spellcheck="false"></pre>
+    </div>
+  </section>
+</main>
+
+<div id="status"></div>
+
+<script src="app.js?v=32"></script>
+</body>
+</html>

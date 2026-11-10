@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "llm_proxy configurator",
+  "version": "1.0.0",
+  "identifier": "dev.llm-proxy-configurator",
+  "build": {
+    "frontendDist": "../web"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "llm_proxy configurator",
+        "width": 1400,
+        "height": 880,
+        "minWidth": 1080,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["icons/icon.ico"],
+    "publisher": "domg73",
+    "copyright": "Copyright (C) 2026 domg73"
+  }
+}

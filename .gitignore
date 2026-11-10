@@ -1,0 +1,22 @@
+# Build outputs — generated locally, never commit
+/src-tauri/target
+/src-tauri/target-build
+/src-tauri/gen
+/dist
+
+# Private local build — machine-specific, not published
+/build.bat
+/_scrub_paths.ps1
+/_check_paths.ps1
+/make_backup.ps1
+/make_release.py
+
+# Session handoff — local working notes, not published
+/HANDOFF.md
+
+# Dev configs — kept locally for testing, not published
+/llm_proxy.toml
+/llm_proxy_bridge.toml
+
+# Icon source — the generated icon lives in src-tauri/icons
+/icon.png
