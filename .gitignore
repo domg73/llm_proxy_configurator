@@ -11,6 +11,9 @@
 /make_backup.ps1
 /make_release.py
 
+# Python bytecode cache
+__pycache__/
+
 # Session handoff — local working notes, not published
 /HANDOFF.md
 

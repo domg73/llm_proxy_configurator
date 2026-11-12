@@ -1,6 +1,6 @@
 [package]
 name = "llm_proxy_configurator"
-version = "1.0.0"
+version = "1.0.1"
 description = "llm_proxy configurator — GUI editor for llm_proxy.toml / llm_proxy_bridge.toml"
 edition = "2021"
 license = "MIT"

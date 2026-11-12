@@ -442,6 +442,7 @@ function validate(st) {
   }
   for (const p of st.profiles) {
     const args = p.args;
+    if (!p.model_id) w.push(`profile "${p.name}": model_id is empty`);
     if (!args.length) {
       w.push(`profile "${p.name}": empty args`);
       continue;
@@ -531,6 +532,29 @@ function renderTabs() {
     b.onclick = () => { currentIdx = i; rebuildAll(); };
     tabs.appendChild(b);
   });
+  syncOrderButtons();
+}
+
+// Move the current profile up/down in the list: the array order is the
+// order the TOML sections (and the tabs / active-profile dropdown) are
+// written in, so a plain swap reorders everything consistently.
+function moveCurrentProfile(delta) {
+  const to = currentIdx + delta;
+  if (to < 0 || to >= state.profiles.length) return;
+  const arr = state.profiles;
+  const tmp = arr[currentIdx];
+  arr[currentIdx] = arr[to];
+  arr[to] = tmp;
+  currentIdx = to;
+  rebuildAll();
+}
+
+// Up/Down buttons: disabled at the list boundaries.
+function syncOrderButtons() {
+  const up = $('#btn-up');
+  const down = $('#btn-down');
+  if (up) up.disabled = currentIdx <= 0;
+  if (down) down.disabled = currentIdx >= state.profiles.length - 1;
 }
 
 function renderActiveSelect() {
@@ -1020,6 +1044,8 @@ function init() {
   $('#btn-save').onclick = () => saveConfig(false);
   $('#btn-copy').onclick = copyTOML;
 
+  $('#btn-up').onclick = () => moveCurrentProfile(-1);
+  $('#btn-down').onclick = () => moveCurrentProfile(1);
   $('#btn-add').onclick = () => {
     let n = 'p' + (state.profiles.length + 1);
     while (state.profiles.some(p => p.name === n)) n += '_';

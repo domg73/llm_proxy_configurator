@@ -142,11 +142,16 @@ button:hover { border-color: var(--accent); color: var(--accent); }
 button.ghost { background: transparent; padding: 7px 9px; }
 button.danger:hover { border-color: var(--danger); color: var(--danger); }
 button:active { transform: translateY(1px); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+button:disabled:hover { border-color: var(--border); color: var(--fg); }
 
 /* ---------- profile tabs ---------- */
-.tabs-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.tabs-row h2 { margin: 0; }
-.tabs { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+/* Two-row layout: a stable header (title left, actions right) and a full-
+   width tab bar below it — the tabs may wrap to several lines without
+   distorting the header, no matter how many profiles there are. */
+.profiles-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.profiles-head h2 { margin: 0; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
 .tab {
   background: var(--bg3);
   border: 1px solid var(--border);
