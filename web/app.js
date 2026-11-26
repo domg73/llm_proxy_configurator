@@ -45,6 +45,8 @@ function emptyState() {
     bind: '',
     token_on: false,
     token: '',
+    websearch_on: false, exa_key: '',
+    tg_on: false, tg_token: '', tg_ids: '', tg_prompt: '', tg_history: 20, tg_thinking: 'default', tg_ws: true,
     active_profile: 'p1',
     proxy: { port: 9931, stats_port: 9935 },
     remote: '',
@@ -253,6 +255,23 @@ function renderTOMLBridge(st) {
   return L.join('\n') + '\n';
 }
 
+// allow_user_ids: free-form "123, 456" text -> TOML array of numeric ids.
+// Non-numeric entries are dropped here and warned about by validate().
+function allowIdsToToml(s) {
+  const ids = (s || '').split(',').map(x => x.trim()).filter(x => /^\d+$/.test(x));
+  return '[' + ids.join(', ') + ']';
+}
+
+function badAllowIds(s) {
+  return (s || '').split(',').map(x => x.trim()).filter(x => x !== '' && !/^\d+$/.test(x));
+}
+
+// history: positive integer, default 20
+function tgHistory(st) {
+  const h = Number(st.tg_history);
+  return Number.isFinite(h) && h > 0 ? h : 20;
+}
+
 function renderTOML(st) {
   if (st.mode === 'bridge') return renderTOMLBridge(st);
   const L = [];
@@ -277,6 +296,26 @@ function renderTOML(st) {
   L.push('[proxy]');
   L.push(`port = ${st.proxy.port}`);
   L.push(`stats_port = ${st.proxy.stats_port}`);
+  L.push('');
+  L.push('# Web search in the chat: on by default, toggled from the UI — no config');
+  L.push('# needed. An Exa API key lifts the free-tier rate limits of the keyless');
+  L.push('# search endpoint.');
+  const wsKey = `exa_api_key = ${q(st.exa_key)}`;
+  L.push(st.websearch_on ? '[web_search]' : '# [web_search]');
+  L.push(st.websearch_on ? wsKey : '# ' + wsKey);
+  L.push('');
+  L.push('# Telegram bot: long polling only — no public port, no webhook.');
+  L.push('# Section absent (or bot_token empty) = bot off.');
+  const tgLines = [
+    `bot_token = ${q(st.tg_token)}`,
+    `allow_user_ids = ${allowIdsToToml(st.tg_ids)}`,
+    `system_prompt = ${q(st.tg_prompt)}`,
+    `history = ${tgHistory(st)}`,
+    `thinking = ${q(st.tg_thinking)}`,
+    `web_search = ${st.tg_ws ? 'true' : 'false'}`,
+  ];
+  L.push(st.tg_on ? '[telegram]' : '# [telegram]');
+  for (const l of tgLines) L.push(st.tg_on ? l : '# ' + l);
   for (const p of st.profiles) {
     L.push('');
     L.push(`[profiles.${p.name}]`);
@@ -390,6 +429,17 @@ function fromToml(root, prev) {
     bind: root.bind ?? '0.0.0.0',
     token_on: 'token' in root,
     token: root.token ?? '',
+    websearch_on: !!root.web_search,
+    exa_key: (root.web_search && root.web_search.exa_api_key) != null ? String(root.web_search.exa_api_key) : '',
+    tg_on: !!root.telegram,
+    tg_token: (root.telegram && root.telegram.bot_token) != null ? String(root.telegram.bot_token) : '',
+    tg_ids: (root.telegram && Array.isArray(root.telegram.allow_user_ids))
+      ? root.telegram.allow_user_ids.map(String).join(', ')
+      : '',
+    tg_prompt: (root.telegram && root.telegram.system_prompt) != null ? String(root.telegram.system_prompt) : '',
+    tg_history: (root.telegram && Number(root.telegram.history) > 0) ? Number(root.telegram.history) : 20,
+    tg_thinking: (root.telegram && String(root.telegram.thinking)) || 'default',
+    tg_ws: String((root.telegram && root.telegram.web_search) ?? 'true') !== 'false',
     active_profile: root.active_profile ?? '',
     proxy: { port: root.proxy?.port ?? 9931, stats_port: root.proxy?.stats_port ?? 9935 },
     remote: isBridge ? String(root.remote ?? '') : (prev ? prev.remote : ''),
@@ -439,6 +489,12 @@ function validate(st) {
   }
   if (st.bind_on && st.bind && st.bind !== '127.0.0.1' && st.bind !== 'localhost' && !st.token_on) {
     w.push(`global: non-local bind (${st.bind}) without token — other hosts on the LAN can use the proxy without a secret`);
+  }
+  if (st.tg_on) {
+    if (!st.tg_token) w.push('global: "telegram" enabled but bot_token is empty — the bot will stay off');
+    const bad = badAllowIds(st.tg_ids);
+    if (bad.length) w.push(`global: "telegram" allow_user_ids: ${bad.map(x => '"' + x + '"').join(', ')} is not a numeric user id`);
+    if (!/^(default|off|low|medium|high|xhigh)$/.test(st.tg_thinking)) w.push(`global: "telegram" thinking '${st.tg_thinking}' is not a valid level (default|off|low|medium|high|xhigh)`);
   }
   for (const p of st.profiles) {
     const args = p.args;
@@ -908,10 +964,19 @@ async function loadConfig() {
     rebuildAll();
     setField('#f-bind', state.bind);
     setField('#f-token', state.token);
+    setField('#f-ws-key', state.exa_key);
+    setField('#f-tg-token', state.tg_token);
+    setField('#f-tg-ids', state.tg_ids);
+    setField('#f-tg-prompt', state.tg_prompt);
+    setField('#f-tg-history', state.tg_history);
+    setField('#f-tg-thinking', state.tg_thinking);
     setField('#f-port', state.proxy.port);
     setField('#f-stats', state.proxy.stats_port);
     $('#f-bind-on').checked = state.bind_on;
     $('#f-token-on').checked = state.token_on;
+    $('#f-ws-on').checked = state.websearch_on;
+    $('#f-tg-on').checked = state.tg_on;
+    $('#f-tg-ws').checked = state.tg_ws;
     status('Loaded ' + name + ' — ' + state.profiles.length + ' profile(s)');
     loadedPath = fromPath;
   } catch (e) {
@@ -971,10 +1036,19 @@ async function maybeLoadDefaultConfig() {
     rebuildAll();
     setField('#f-bind', state.bind);
     setField('#f-token', state.token);
+    setField('#f-ws-key', state.exa_key);
+    setField('#f-tg-token', state.tg_token);
+    setField('#f-tg-ids', state.tg_ids);
+    setField('#f-tg-prompt', state.tg_prompt);
+    setField('#f-tg-history', state.tg_history);
+    setField('#f-tg-thinking', state.tg_thinking);
     setField('#f-port', state.proxy.port);
     setField('#f-stats', state.proxy.stats_port);
     $('#f-bind-on').checked = state.bind_on;
     $('#f-token-on').checked = state.token_on;
+    $('#f-ws-on').checked = state.websearch_on;
+    $('#f-tg-on').checked = state.tg_on;
+    $('#f-tg-ws').checked = state.tg_ws;
     status('Auto-loaded ' + def.name + (state.mode === 'bridge' ? ' (bridge)' : ' (local)'));
     loadedPath = def.path;
   } catch (e) {
@@ -998,13 +1072,31 @@ function init() {
   // global fields
   $('#f-bind-on').checked = state.bind_on;
   $('#f-token-on').checked = state.token_on;
+  $('#f-ws-on').checked = state.websearch_on;
+  $('#f-tg-on').checked = state.tg_on;
+  $('#f-tg-ws').checked = state.tg_ws;
   $('#f-bind').value = state.bind;
   $('#f-token').value = state.token;
+  $('#f-ws-key').value = state.exa_key;
+  $('#f-tg-token').value = state.tg_token;
+  $('#f-tg-ids').value = state.tg_ids;
+  $('#f-tg-prompt').value = state.tg_prompt;
+  $('#f-tg-history').value = state.tg_history;
+  $('#f-tg-thinking').value = state.tg_thinking;
   $('#f-port').value = state.proxy.port;
   $('#f-stats').value = state.proxy.stats_port;
 
   $('#f-bind').oninput = e => { state.bind = e.target.value.trim() || '0.0.0.0'; renderPreview(); };
   $('#f-token').oninput = e => { state.token = e.target.value.trim(); renderPreview(); };
+  $('#f-ws-key').oninput = e => { state.exa_key = e.target.value.trim(); renderPreview(); };
+  $('#f-tg-token').oninput = e => { state.tg_token = e.target.value.trim(); renderPreview(); };
+  $('#f-tg-ids').oninput = e => { state.tg_ids = e.target.value.trim(); renderPreview(); };
+  $('#f-tg-prompt').oninput = e => { state.tg_prompt = e.target.value.trim(); renderPreview(); };
+  $('#f-tg-history').oninput = e => { state.tg_history = Number(e.target.value) || 0; renderPreview(); };
+  $('#f-ws-on').onchange = e => { state.websearch_on = e.target.checked; renderPreview(); };
+  $('#f-tg-on').onchange = e => { state.tg_on = e.target.checked; renderPreview(); };
+  $('#f-tg-ws').onchange = e => { state.tg_ws = e.target.checked; renderPreview(); };
+  $('#f-tg-thinking').onchange = e => { state.tg_thinking = e.target.value; renderPreview(); };
   $('#f-bind-on').onchange = e => { state.bind_on = e.target.checked; renderPreview(); };
   $('#f-token-on').onchange = e => {
     state.token_on = e.target.checked;
@@ -1085,4 +1177,4 @@ function init() {
 if (typeof document !== 'undefined') init();
 
 // test hooks (node)
-if (typeof module !== 'undefined') module.exports = { parseTOML, renderTOML, fromToml, parseArgsText, argsToText, setModelArg, setFlagArg, modelArgOf, modelFlagOf, ctxFlagOf, ctxSyncArg, ctxToBackend, tokenSyncArg, visionSyncArg, profileBackend, validate, BACKENDS, backendFromExe };
+if (typeof module !== 'undefined') module.exports = { parseTOML, renderTOML, fromToml, parseArgsText, argsToText, setModelArg, setFlagArg, modelArgOf, modelFlagOf, ctxFlagOf, ctxSyncArg, ctxToBackend, tokenSyncArg, visionSyncArg, profileBackend, validate, BACKENDS, backendFromExe, allowIdsToToml, badAllowIds };

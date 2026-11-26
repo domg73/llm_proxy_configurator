@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>llm_proxy configurator</title>
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=33">
 <script>
 /* theme: system (follows the OS's prefers-color-scheme) / dark / light —
    per-browser choice persisted in localStorage; ?theme= overrides for testing */
@@ -82,6 +82,45 @@
           <button id="btn-token-clear" class="ghost" title="Clear">✕</button>
         </div>
       </label>
+      <label class="wide">Web search — Exa API key <span class="hint">(chat web search is on by default, toggled from the UI — the key only lifts the free-tier rate limits of the keyless endpoint; unchecked = block commented out)</span>
+        <div class="row">
+          <input type="checkbox" id="f-ws-on" class="tgl" title="Checked = [web_search] block active in the TOML; unchecked = commented out (#)">
+          <input id="f-ws-key" type="text" spellcheck="false" placeholder="exa_api_key">
+        </div>
+      </label>
+      <label class="wide">Telegram bot <span class="hint">(token from @BotFather; unchecked or empty bot_token = the bot stays off)</span>
+        <div class="row">
+          <input type="checkbox" id="f-tg-on" class="tgl" title="Checked = [telegram] block active in the TOML; unchecked = commented out (#)">
+          <input id="f-tg-token" type="text" spellcheck="false" placeholder="bot_token">
+        </div>
+      </label>
+      <div class="grid3">
+        <label>allow_user_ids <span class="hint">(comma-separated; empty = the first user to write becomes the owner)</span>
+          <input id="f-tg-ids" type="text" spellcheck="false" placeholder="e.g. 12345, 67890">
+        </label>
+        <label>history <span class="hint">(messages kept per chat)</span>
+          <input id="f-tg-history" type="number" min="0" step="1">
+        </label>
+        <label>thinking <span class="hint">(initial effort)</span>
+          <select id="f-tg-thinking">
+            <option>default</option>
+            <option>off</option>
+            <option>low</option>
+            <option>medium</option>
+            <option>high</option>
+            <option>xhigh</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid2">
+        <label class="check">
+          <input id="f-tg-ws" type="checkbox">
+          Telegram web_search <span class="hint">(initial state of the /search toggle in the bot)</span>
+        </label>
+        <label>system_prompt <span class="hint">(optional; empty = no system message)</span>
+          <input id="f-tg-prompt" type="text" spellcheck="false">
+        </label>
+      </div>
       <div class="grid3">
         <label>Active profile
           <select id="f-active"></select>
@@ -151,6 +190,6 @@
 
 <div id="status"></div>
 
-<script src="app.js?v=32"></script>
+<script src="app.js?v=33"></script>
 </body>
 </html>

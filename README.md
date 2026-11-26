@@ -6,7 +6,7 @@ A native Windows **GUI editor for `llm_proxy.toml` / `llm_proxy_bridge.toml`** �
 
 The editor covers both configuration modes:
 
-- **Local** — `llm_proxy.toml`: global settings (bind, token, ports) plus one or more backend profiles (exe, workdir, model, mmproj, args), with the active profile selectable at startup.
+- **Local** — `llm_proxy.toml`: global settings (bind, token, ports, web search, Telegram bot) plus one or more backend profiles (exe, workdir, model, mmproj, args), with the active profile selectable at startup.
 - **Bridge** — `llm_proxy_bridge.toml`: no local backend; the remote `host:port` and token of the llm_proxy that runs the backend, plus the local proxy/stats ports.
 
 The preview updates on every keystroke and flags **out-of-sync fields** (e.g. `vision = true` without the backend's `--vision` flag, or `context_length` differing from `--max-context`) before you save, so the toml you hand to llm_proxy is always internally consistent.
@@ -18,7 +18,7 @@ The preview updates on every keystroke and flags **out-of-sync fields** (e.g. `v
 - **Profiles** — add (＋ New), duplicate (⧉ Duplicate) and delete (🗑 Delete) backend profiles, select them with tabs, and choose the **active profile** (the one llm_proxy starts at boot).
 - **Args text area** — CLI arguments one per line: `--flag value`, or `--flag` for valueless flags. The model and mmproj fields are two-way synced with their lines in args (edit either side).
 - **File pickers** — native 📂 pickers for the backend exe, the model and the mmproj file (plus drag & drop). Picking the exe auto-fills the workdir from its folder. Constraints follow the backend: the model cannot be picked before the exe is chosen, and the mmproj field is disabled for ninfer.
-- **Live preview + warnings** — the exact TOML rendered on the right, with the profile in editing highlighted. Warnings above the preview catch: vision / context_length out of sync with the backend flags, empty args or a missing model path, a backend `--port` colliding with the proxy/stats port, proxy/stats ports being equal, an active profile that doesn't exist, a token out of sync with a profile's `--api-key`, and a LAN bind without a token.
+- **Live preview + warnings** — the exact TOML rendered on the right, with the profile in editing highlighted. Warnings above the preview catch: vision / context_length out of sync with the backend flags, empty args or a missing model path, a backend `--port` colliding with the proxy/stats port, proxy/stats ports being equal, an active profile that doesn't exist, a token out of sync with a profile's `--api-key`, a LAN bind without a token, an empty Telegram `bot_token`, or a `thinking` level llm_proxy does not accept.
 - **Save / Save As** — **Ctrl+S** overwrites the file the config was loaded from (no dialog); **Ctrl+Shift+S** (or a plain Save from a fresh config) opens a Save As dialog. ⧉ Copy puts the current TOML on the clipboard.
 - **Auto-load** — on start the app loads the config sitting next to the exe (`llm_proxy.toml` preferred, then `llm_proxy_bridge.toml`); with none present the editor starts empty.
 - **Token helper** — 🎲 Generate produces a random 256-bit secret (64 hex) for the `token` field **and sets `--api-key <token>` in every profile's args** — the backend gate: llm_proxy presents its token on every backend hop, so each backend starts with the same secret.
@@ -47,6 +47,8 @@ The editor manages every field llm_proxy reads; the preview is the file that get
 |---|---|
 | Bind | Listen address for proxy + stats servers. Disabled = the line is commented out (llm_proxy defaults to `127.0.0.1`). |
 | Token | Shared secret. Empty with the toggle on = llm_proxy auto-generates a 256-bit secret on first start. Disabled = line commented out. |
+| Web search | The optional `[web_search]` Exa API key — lifts the free-tier rate limits of the keyless search endpoint. Disabled = block commented out (the search still works). |
+| Telegram bot | The `[telegram]` section: bot token, `allow_user_ids`, system prompt, per-chat history, thinking effort, and the initial state of the `/search` toggle. Disabled = section not emitted (bot off). |
 | Active profile | Profile started at boot (dropdown over the defined profiles). |
 | Proxy port / Stats port | The OpenAI `/v1` port and the dashboard port (must differ from each other and from every backend `--port`). |
 
